@@ -1,0 +1,109 @@
+clc
+clear all
+close all
+% Read the input image
+image_path = 'https://classroomclipart.com/image/static7/preview1/happy-bear-reading-a-red-book-61363.jpg';
+image = imread(image_path);
+
+% Display the original image
+subplot(3, 3, 1);
+imshow(image);
+title('Original Image');
+
+% Convert the image to grayscale if it's RGB
+if size(image, 3) == 3
+    image = rgb2gray(image);
+end
+
+% Get the size of the image
+[m, n] = size(image);
+
+% Define the kernel sizes
+kernel_sizes = [3, 5, 7, 9, 15];
+
+% Initialize the filtered images cell array
+filtered_images = cell(1, numel(kernel_sizes));
+
+% Apply average filtering for each kernel size
+for k = 1:numel(kernel_sizes)
+    % Define the kernel
+    kernel_size = kernel_sizes(k);
+    kernel = ones(kernel_size) / (kernel_size^2);
+    
+    % Pad the image with zeros to handle edges
+    padding = floor(kernel_size / 2);
+    padded_image = padarray(double(image), [padding, padding], 'replicate');
+    
+    % Initialize the filtered image
+    filtered_image = zeros(m, n);
+    
+    % Apply the filter manually
+    for i = 1:m
+        for j = 1:n
+            % Extract the neighborhood
+            neighborhood = padded_image(i:i+kernel_size-1, j:j+kernel_size-1);
+            % Compute the average using element-wise multiplication and sum
+            filtered_image(i, j) = sum(neighborhood(:) .* kernel(:));
+        end
+    end
+    
+    % Convert the filtered image back to uint8
+    filtered_images{k} = uint8(filtered_image);
+end
+
+% Display the original and filtered images
+figure;
+subplot(2, 3, 1);
+imshow(image);
+title('Original Image');
+
+% Display filtered images
+for k = 1:numel(kernel_sizes)
+    subplot(2, 3, k+1);
+    imshow(filtered_images{k});
+    title(['Filtered Image ', num2str(kernel_sizes(k)), 'x', num2str(kernel_sizes(k))]);
+end
+% Initialize the filtered images cell array
+filtered_images = cell(1, numel(kernel_sizes));
+
+% Apply Laplacian filtering for each kernel size
+for k = 1:numel(kernel_sizes)
+    % Define the Laplacian kernel
+    laplacian_kernel = fspecial('laplacian', 0);
+    if kernel_sizes(k) > 3
+        laplacian_kernel = fspecial('laplacian', 1);
+    end
+    
+    % Pad the image with zeros to handle edges
+    padding = floor(size(laplacian_kernel, 1) / 2);
+    padded_image = padarray(double(image), [padding, padding], 'replicate');
+    
+    % Initialize the filtered image
+    filtered_image = zeros(m, n);
+    
+    % Apply the filter manually
+    for i = 1:m
+        for j = 1:n
+            % Extract the neighborhood
+            neighborhood = padded_image(i:i+2*padding, j:j+2*padding);
+            % Compute the Laplacian using element-wise multiplication and sum
+            filtered_image(i, j) = sum(neighborhood(:) .* laplacian_kernel(:));
+        end
+    end
+    
+    % Convert the filtered image back to uint8
+    filtered_images{k} = uint8(filtered_image);
+end
+
+% Display the original and filtered images
+figure;
+subplot(2, 3, 1);
+imshow(image);
+title('Original Image');
+
+% Display filtered images
+for k = 1:numel(kernel_sizes)
+    subplot(2, 3, k+1);
+    imshow(filtered_images{k});
+    title(['Filtered Image ', num2str(kernel_sizes(k)), 'x', num2str(kernel_sizes(k))]);
+end
