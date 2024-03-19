@@ -1,0 +1,222 @@
+% Read the input image
+image_path = 'https://cdn.pixabay.com/photo/2014/02/27/16/10/flowers-276014_640.jpg';
+originalImage = imread(image_path);
+imshow(originalImage)
+title('original Image')
+% Convert the image to grayscale if it's RGB
+if size(originalImage, 3) == 3
+    originalImage = rgb2gray(originalImage);
+end
+
+% Define a filter kernel (e.g., a simple averaging filter)
+filterSize = 5; % Size of the filter kernel (odd number)
+filter = ones(filterSize) / filterSize^2; % Averaging filter
+
+% Perform convolution
+filteredImage = conv2(double(originalImage), filter, 'same');
+
+% Convert the result back to uint8 and display
+filteredImage = uint8(filteredImage);
+imshow(filteredImage);
+title('Filtered Image');
+
+% Perform 2D Fourier Transform
+fftImage = fft2(double(originalImage));
+
+% Define filter parameters for low-pass filter
+cutoff_frequency = 0.1; % Adjust this value to control the cutoff frequency
+[M, N] = size(originalImage);
+u = 0:(M-1);
+v = 0:(N-1);
+idx = find(u > M/2);
+u(idx) = u(idx) - M;
+idy = find(v > N/2);
+v(idy) = v(idy) - N;
+[V, U] = meshgrid(v, u);
+D = sqrt(U.^2 + V.^2);
+
+% Create low-pass filter mask
+LPF_mask = double(D <= cutoff_frequency * max(M, N));
+
+% Apply the filter in the frequency domain
+filtered_fftImage = fftImage .* LPF_mask;
+
+% Perform inverse Fourier Transform to obtain filtered image
+filteredImage = ifft2(filtered_fftImage);
+
+% Convert the result back to uint8 and display
+filteredImage = uint8(abs(filteredImage));
+
+% Display the original and filtered images
+figure;
+subplot(1, 2, 1);
+imshow(originalImage);
+title('Original Image');
+subplot(1, 2, 2);
+imshow(filteredImage);
+title('Low-pass Filtered Image');
+% Fourier Transform of the Image (Magnitude)
+subplot(2, 3, 2);
+F_uv = fftshift(log(1 + abs(fftImage)));
+imshow(F_uv, []);
+title('Fourier Transform of Image (|F(u,v)|)');
+
+% Filter (H(u,v))
+subplot(2, 3, 3);
+imshow(LPF_mask, []);
+title('Filter H(u,v)');
+
+% Filtered Image
+subplot(2, 3, 4);
+imshow(filteredImage);
+title('Filtered Image');
+
+% Filtered Image Fourier Transform (Magnitude)
+subplot(2, 3, 5);
+G_uv = fftshift(log(1 + abs(filtered_fftImage)));
+imshow(G_uv, []);
+title('Filtered Image Fourier Transform (|G(u,v)|)');
+
+% Inverse Fourier Transform of Filtered Image (g(x,y))
+subplot(2, 3, 6);
+imshow(filteredImage);
+title('Inverse Fourier Transform of Filtered Image (g(x,y))');
+
+% Adjust subplot layout
+sgtitle('Plotting f(x,y), F(u,v), H(u,v), G(u,v), g(x,y)');
+% Define different cutoff frequencies for each filter
+cutoff_frequencies = [0.1, 0.05, 0.02]; % Adjust as needed
+
+% Apply ideal, Gaussian, and Butterworth filters for each cutoff frequency
+filteredImages = cell(length(cutoff_frequencies), 3);
+for i = 1:length(cutoff_frequencies)
+    % Ideal low-pass filter
+    LPF_mask_ideal = double(D <= cutoff_frequencies(i) * max(M, N));
+    filtered_fftImage_ideal = fftImage .* LPF_mask_ideal;
+    filteredImage_ideal = uint8(abs(ifft2(filtered_fftImage_ideal)));
+    filteredImages{i, 1} = filteredImage_ideal;
+
+    % Gaussian low-pass filter
+    LPF_mask_gaussian = exp(-(D.^2) / (2 * (cutoff_frequencies(i) * max(M, N))^2));
+    filtered_fftImage_gaussian = fftImage .* LPF_mask_gaussian;
+    filteredImage_gaussian = uint8(abs(ifft2(filtered_fftImage_gaussian)));
+    filteredImages{i, 2} = filteredImage_gaussian;
+
+    % Butterworth low-pass filter (order = 2)
+    LPF_mask_butterworth = 1 ./ (1 + (D ./ (cutoff_frequencies(i) * max(M, N))).^2).^2;
+    filtered_fftImage_butterworth = fftImage .* LPF_mask_butterworth;
+    filteredImage_butterworth = uint8(abs(ifft2(filtered_fftImage_butterworth)));
+    filteredImages{i, 3} = filteredImage_butterworth;
+end
+
+% Display the filtered images
+figure;
+for i = 1:length(cutoff_frequencies)
+    for j = 1:3
+        subplot(length(cutoff_frequencies), 3, (i - 1) * 3 + j);
+        imshow(filteredImages{i, j});
+        if j == 1
+            filter_type = 'Ideal';
+        elseif j == 2
+            filter_type = 'Gaussian';
+        else
+            filter_type = 'Butterworth';
+        end
+        title(['Cutoff: ', num2str(cutoff_frequencies(i)), ' | Filter: ', filter_type], 'Interpreter', 'none');
+    end
+end
+
+
+% Create high-pass filter mask
+HPF_mask = double(D > cutoff_frequency * max(M, N));
+
+% Apply the filter in the frequency domain
+filtered_fftImage = fftImage .* HPF_mask;
+
+% Perform inverse Fourier Transform to obtain filtered image
+filteredImage = ifft2(filtered_fftImage);
+
+% Convert the result back to uint8 and display
+filteredImage = uint8(abs(filteredImage));
+
+% Display the original and filtered images
+figure;
+subplot(1, 2, 1);
+imshow(originalImage);
+title('Original Image');
+subplot(1, 2, 2);
+imshow(filteredImage);
+title('High-pass Filtered Image');
+
+% Fourier Transform of the Image (Magnitude)
+figure;
+subplot(2, 3, 1);
+F_uv = fftshift(log(1 + abs(fftImage)));
+imshow(F_uv, []);
+title('Fourier Transform of Image (|F(u,v)|)');
+
+% Filter (H(u,v))
+subplot(2, 3, 2);
+imshow(HPF_mask, []);
+title('Filter H(u,v)');
+
+% Filtered Image
+subplot(2, 3, 3);
+imshow(filteredImage);
+title('Filtered Image');
+
+% Filtered Image Fourier Transform (Magnitude)
+subplot(2, 3, 4);
+G_uv = fftshift(log(1 + abs(filtered_fftImage)));
+imshow(G_uv, []);
+title('Filtered Image Fourier Transform (|G(u,v)|)');
+
+% Inverse Fourier Transform of Filtered Image (g(x,y))
+subplot(2, 3, 5);
+imshow(filteredImage);
+title('Inverse Fourier Transform of Filtered Image (g(x,y))');
+
+% Adjust subplot layout
+sgtitle('Plotting F(u,v), H(u,v), G(u,v), g(x,y)');
+
+% Define different cutoff frequencies for each filter
+cutoff_frequencies = [0.1, 0.05, 0.02]; % Adjust as needed
+
+% Apply ideal, Gaussian, and Butterworth filters for each cutoff frequency
+filteredImages = cell(length(cutoff_frequencies), 3);
+for i = 1:length(cutoff_frequencies)
+    % Ideal high-pass filter
+    HPF_mask_ideal = double(D > cutoff_frequencies(i) * max(M, N));
+    filtered_fftImage_ideal = fftImage .* HPF_mask_ideal;
+    filteredImage_ideal = uint8(abs(ifft2(filtered_fftImage_ideal)));
+    filteredImages{i, 1} = filteredImage_ideal;
+
+    % Gaussian high-pass filter
+    HPF_mask_gaussian = 1 - exp(-(D.^2) / (2 * (cutoff_frequencies(i) * max(M, N))^2));
+    filtered_fftImage_gaussian = fftImage .* HPF_mask_gaussian;
+    filteredImage_gaussian = uint8(abs(ifft2(filtered_fftImage_gaussian)));
+    filteredImages{i, 2} = filteredImage_gaussian;
+
+    % Butterworth high-pass filter (order = 2)
+    HPF_mask_butterworth = 1 ./ (1 + (cutoff_frequencies(i) * max(M, N))./ D).^2;
+    filtered_fftImage_butterworth = fftImage .* HPF_mask_butterworth;
+    filteredImage_butterworth = uint8(abs(ifft2(filtered_fftImage_butterworth)));
+    filteredImages{i, 3} = filteredImage_butterworth;
+end
+
+% Display the filtered images
+figure;
+for i = 1:length(cutoff_frequencies)
+    for j = 1:3
+        subplot(length(cutoff_frequencies), 3, (i - 1) * 3 + j);
+        imshow(filteredImages{i, j});
+        if j == 1
+            filter_type = 'Ideal';
+        elseif j == 2
+            filter_type = 'Gaussian';
+        else
+            filter_type = 'Butterworth';
+        end
+        title(['Cutoff: ', num2str(cutoff_frequencies(i)), ' | Filter: ', filter_type], 'Interpreter', 'none');
+    end
+end
